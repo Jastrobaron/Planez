@@ -26,16 +26,16 @@ import java.util.Map;
 public class PlaneControlEvent implements Listener {
 
 
-	private Plugin plugin;
+	private final Plugin plugin;
 	private  Map<Material, Integer> fuelValues;
 	private static final String PLANE_KEY = "plane";
 	private static final String SHOOT_COOLDOWN_KEY = "cooldown";
 
 	private static final String SPEED_FACTOR_KEY = "velocity-scalar";
 
-	private double speedUpFactor;
-	private int shootCooldownTicks;
-	private double maxVelocity;
+	private final double speedUpFactor;
+	private final int shootCooldownTicks;
+	private final double maxVelocity;
 
 	public PlaneControlEvent(Plugin p) {
 		this.plugin = p;
@@ -202,12 +202,7 @@ public class PlaneControlEvent implements Listener {
 	private int consumeFuel(Player plr) {
 		PlayerInventory inv = plr.getInventory();
 		ItemStack item = inv.getItemInOffHand();
-
-		for (Material e : this.fuelValues.keySet()) {
-			if (e != item.getType()) continue;
-			item.setAmount(item.getAmount()-1);
-			return this.fuelValues.get(e);
-		}
-		return 0;
+		Integer value = this.fuelValues.get(item.getType());
+		return value == null ? 0 : value;
 	}
 }
