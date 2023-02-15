@@ -1,0 +1,11 @@
+name: Planez
+version: '${project.version}'
+main: xyz.rtsvk.minecraft.planez.Planez
+api-version: 1.19
+authors: [ Jastrobaron ]
+description: Lorem ipsum dolor sit amet
+commands:
+  planesummoner:
+    description: Gets you the plane summoner.
+    aliases: [plane, psummoner]
+    usage: /<command>

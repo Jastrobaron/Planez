@@ -1,0 +1,3 @@
+velocity-scalar: 1.25
+max-velocity: 5.0
+arrow-cooldown-ticks: 30
