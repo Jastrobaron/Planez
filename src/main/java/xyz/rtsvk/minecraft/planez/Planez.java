@@ -9,8 +9,6 @@ import java.io.File;
 
 public final class Planez extends JavaPlugin {
 
-	private PlaneControlEvent planeCtl;
-
 	@Override
 	public void onEnable() {
 		// Plugin startup login
@@ -18,8 +16,7 @@ public final class Planez extends JavaPlugin {
 		saveDefaultConfig();
 		createCustomConfig("fuel.json");
 
-		this.planeCtl = new PlaneControlEvent(this);
-		getServer().getPluginManager().registerEvents(this.planeCtl, this);
+		getServer().getPluginManager().registerEvents(new PlaneControlEvent(this), this);
 
 		ItemManager.init();
 		getServer().addRecipe(PlaneSummoner.getRecipe());

@@ -8,7 +8,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.vehicle.VehicleBlockCollisionEvent;
 import org.bukkit.event.vehicle.VehicleExitEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -34,13 +36,15 @@ public class PlaneControlEvent implements Listener {
 	private static final String SPEED_FACTOR_KEY = "velocity-scalar";
 
 	private final double speedUpFactor;
-	private final int shootCooldownTicks;
 	private final double maxVelocity;
+	private final double explosionThreshold;
+	private final int shootCooldownTicks;
 
 	public PlaneControlEvent(Plugin p) {
 		this.plugin = p;
 		this.speedUpFactor = p.getConfig().getDouble(SPEED_FACTOR_KEY);
 		this.maxVelocity = p.getConfig().getDouble("max-velocity");
+		this.explosionThreshold = p.getConfig().getDouble("explosion-threshold");
 		this.shootCooldownTicks = p.getConfig().getInt("arrow-cooldown-ticks");
 
 		try {
@@ -74,7 +78,19 @@ public class PlaneControlEvent implements Listener {
 
 		if (a == Action.LEFT_CLICK_AIR || a == Action.LEFT_CLICK_BLOCK) {
 			Entity plane = plr.getVehicle();
-			if (plane == null) return;
+			if (plane == null) {
+				Location spawnLoc = plr.getLocation();
+				Minecart mc = spawnLoc.getWorld().spawn(spawnLoc, Minecart.class);
+
+				mc.setMaxSpeed(100.0);
+				mc.addPassenger(plr);
+				mc.setMetadata(PLANE_KEY, new FixedMetadataValue(this.plugin, 0));  // plane's fuel amount
+				mc.setGravity(false);
+				mc.setFlyingVelocityMod(new Vector(0.99, 0.99, 0.99));
+				mc.setInvulnerable(true);
+				e.setCancelled(true);
+				return;
+			}
 			if (!plane.hasMetadata(PLANE_KEY)) return;
 
 			if (plr.getGameMode() != GameMode.CREATIVE) {
@@ -108,7 +124,7 @@ public class PlaneControlEvent implements Listener {
 
 		}
 
-		else if (a == Action.RIGHT_CLICK_AIR) {
+		else if (a == Action.RIGHT_CLICK_AIR || a == Action.RIGHT_CLICK_BLOCK) {
 			Entity ent = plr.getVehicle();
 			if (ent == null) return;
 			if (!ent.hasMetadata(PLANE_KEY)) return;
@@ -135,7 +151,7 @@ public class PlaneControlEvent implements Listener {
 			double speed = abs(plane.getVelocity());
 			if (speed < this.maxVelocity) {
 				Vector velocity = plr.getLocation().getDirection().multiply(speedFactor);
-				plane.setVelocity(plane.getVelocity().add(velocity));
+				plane.setVelocity(plane.getVelocity().multiply(0.75).add(velocity));
 
 				if (speedFactor > 1) {
 					plr.playSound(plr.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 2.0f, 1.0f);
@@ -145,25 +161,30 @@ public class PlaneControlEvent implements Listener {
 					}
 				}
 			}
-
 		}
+	}
 
-		// spawn the plane
-		else if (a == Action.RIGHT_CLICK_BLOCK) {
-			if (plr.getVehicle() != null) {
-				plr.sendMessage(Component.text("You can't spawn airplanes while in some other vehicle!"));
-				return;
-			}
+	@EventHandler
+	public void move(VehicleMoveEvent e) {
+		Vehicle plane = e.getVehicle();
+		if (!plane.hasMetadata(PLANE_KEY)) return;
 
-			Location spawnLoc = plr.getLocation();
-			Minecart mc = spawnLoc.getWorld().spawn(spawnLoc, Minecart.class);
+		double speed = abs(plane.getVelocity());
+		plane.getPassengers().forEach(p -> p.sendActionBar(Component.text(speed)));
+		if (speed < 0.01) plane.setVelocity(new Vector(0,0,0));
+	}
 
-			mc.setMaxSpeed(100.0);
-			mc.addPassenger(plr);
-			mc.setMetadata(PLANE_KEY, new FixedMetadataValue(this.plugin, 0));  // plane's fuel amount
-			mc.setGravity(false);
-			mc.setFlyingVelocityMod(new Vector(0.95, 0.95, 0.95));
-			mc.setInvulnerable(true);
+	@EventHandler
+	public void onImpact(VehicleBlockCollisionEvent e) {
+		Vehicle plane = e.getVehicle();
+		if (!plane.hasMetadata(PLANE_KEY)) return;
+		plane.getPassengers().forEach(p -> p.sendActionBar(Component.text("collision detected")));
+
+		double speed = abs(plane.getVelocity());
+		if (speed > this.explosionThreshold) {
+			Location loc = plane.getLocation();
+			plane.getWorld().createExplosion(loc, (float)speed, true, true);
+			plane.remove();
 		}
 	}
 
