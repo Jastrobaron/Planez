@@ -181,6 +181,23 @@ public class PlaneControlEvent implements Listener {
 		plane.getPassengers().forEach(p -> p.sendActionBar(Component.text("collision detected")));
 
 		double speed = abs(plane.getVelocity());
+		
+		// Get player and calculate delta velocity
+		Player player = e.getPlayer();
+		double last_vel = (double)(player.hasMetadata("vel") ? player.getMetadata("vel") : 0.0);
+		double dv = last_vel - speed;
+		
+		// Update the velocity of the player for the next tick
+		player.setMetadata("vel", new FixedMetadataValue(this.plugin, speed));
+		
+		if(dv > 0.0) { // Player slowing down
+			if(speed < last_vel * (1 - 0.8)) { // Player drastically losing more than 80% of their velocity
+				// Possible collision here...
+			}
+		} else { // Player accelerating
+			
+		}
+		
 		if (speed > this.explosionThreshold) {
 			Location loc = plane.getLocation();
 			plane.getWorld().createExplosion(loc, (float)speed, true, true);
